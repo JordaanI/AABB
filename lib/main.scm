@@ -51,6 +51,15 @@
      (map + b0 b1)
      (map - b0 b1))))
 
+(define (extent->radius boundry)
+  (let* ((b0 (boundry-0 boundry))
+	 (b1 (boundry-1 boundry))
+	 (p (map (lambda (x y) (/ (+ x y) 2)) b1 b0)))
+    (new-boundry p
+		 (map
+		  (lambda (e) (/ e 2.0))
+		  p))))
+
 (define (extent-collision b1 b2)
   (let ((b1-0 (boundry-0 b1))
         (b1-1 (boundry-1 b1))
@@ -71,11 +80,19 @@
                       (map - b1-0 b2-0)))
         (expt (+ b1-1 b2-1) 2))))
 
-(define (extent-radius-collision b1 b2)
-  (let ((b1-0 (boundry-0 b1))
+(define (extent-radius-collision e r)
+  (let ((b1 (extent->radius e))
+	(b1-0 (boundry-0 b1))
         (b1-1 (boundry-1 b1))
-        (b2-0 (boundry-0 b2))
-        (b2-1 (boundry-1 b2)))))
+        (b2-0 (boundry-0 r))
+        (b2-1 (boundry-1 r))
+	(dist (map abs (map - b2-0 b1-0))))
+    (apply orf
+	   (cons
+	    (<= (apply + (map (lambda (e0 e1)
+				(expt (- e0 e1) 2))
+			      b2 b1)))
+	    (map <= dist b1-1)))))
 
 (define (check-collision b1 b2)
   #t)
