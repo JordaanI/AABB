@@ -30,6 +30,16 @@
    (list->table `((0 . ,center)
                   (1 . ,radius)))))
 
+(define (square-radius? boundry)
+  (and
+   (eq? (boundry-type boundry) 'radius)
+   (list? (table-ref (boundry-data boundry) 1))))
+
+(define (circle-radius? boundry)
+  (and
+   (eq? (boundry-type boundry) 'radius)
+   (number? (table-ref (boundry-data boundry) 1))))
+
 (define (boundry-0 boundry #!optional value)
   (let ((data (table-copy (boundry-data boundry))))
     (if value (begin
@@ -48,8 +58,8 @@
   (let ((b0 (boundry-0 boundry))
         (b1 (boundry-1 boundry)))
     (_boundry
-     (map + b0 b1)
-     (map - b0 b1))))
+     (map - b0 b1)
+     (map + b0 b1))))
 
 (define (extent->radius boundry)
   (let* ((b0 (boundry-0 boundry))
@@ -60,7 +70,7 @@
 		  (lambda (e) (/ e 2.0))
 		  p))))
 
-(define (extent-collision b1 b2)
+(define (extent-collision? b1 b2)
   (let ((b1-0 (boundry-0 b1))
         (b1-1 (boundry-1 b1))
         (b2-0 (boundry-0 b2))
@@ -70,7 +80,7 @@
             (map <= b1-0 b2-1)
             (map >= b1-1 b2-0)))))
 
-(define (radius-collision b1 b2)
+(define (radius-collision? b1 b2)
   (let ((b1-0 (boundry-0 b1))
         (b1-1 (boundry-1 b1))
         (b2-0 (boundry-0 b2))
@@ -80,19 +90,44 @@
                       (map - b1-0 b2-0)))
         (expt (+ b1-1 b2-1) 2))))
 
-(define (extent-radius-collision e r)
-  (let ((b1 (extent->radius e))
-	(b1-0 (boundry-0 b1))
-        (b1-1 (boundry-1 b1))
-        (b2-0 (boundry-0 r))
-        (b2-1 (boundry-1 r))
-	(dist (map abs (map - b2-0 b1-0))))
-    (apply orf
-	   (cons
-	    (<= (apply + (map (lambda (e0 e1)
-				(expt (- e0 e1) 2))
-			      b2 b1)))
-	    (map <= dist b1-1)))))
+(define (extent-radius-collision? b1 b2)
+  (let* ((b1-0 (boundry-0 b1))
+         (b1-1 (boundry-1 b1))
+         (b2-0 (boundry-0 b2))
+         (b2-1 (boundry-1 b2))
+	 (cx (first b2-0))
+	 (cy (second b2-0))
+	 (x0 (first b1-0))
+	 (y0 (second b1-0))
+	 (x1 (first b1-1))
+	 (y1 (second b1-1))
+	 (dx (- cx (cond
+		    ((< cx x0) x0)
+		    ((> cx x1) x1)
+		    (#t cx))))
+	 (dy (- cy (cond
+		    ((< cy y0) y0)
+		    ((> cy y1) y1)
+		    (#t cy)))))
+    (<= (+ (expt dx 2) (expt dy 2)) (expt b2-1 2))))
 
-(define (check-collision b1 b2)
-  #t)
+(define (collision? b1 b2)
+  (or
+   (and
+    (square-radius? b1)
+    (or
+     (and
+      (square-radius? b2)
+      (extent-collision? (radius->extent b1) (radius->extent b2)))
+     (and
+      (circle-radius? b2)
+      (extent-radius-collision? b1 b2))))
+   (and
+    (circle-radius? b1)
+    (or
+     (and
+      (square-radius? b2)
+      (extent-radius-collision? b2 b1))
+     (and
+      (circle-radius? b2)
+      (radius-collision? b1 b2))))))
