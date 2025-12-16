@@ -55,20 +55,43 @@
         (table-ref data 1))))
 
 (define (radius->extent boundry)
-  (let ((b0 (boundry-0 boundry))
-        (b1 (boundry-1 boundry)))
+  (let* ((b0 (boundry-0 boundry))
+         (b1 (boundry-1 boundry))
+	 (factor (if (list? b1) b1
+		     (make-list (length b0) b1))))
     (_boundry
-     (map - b0 b1)
-     (map + b0 b1))))
+     (map - b0 factor)
+     (map + b0 factor))))
 
 (define (extent->radius boundry)
-  (let* ((b0 (boundry-0 boundry))
-	 (b1 (boundry-1 boundry))
-	 (p (map (lambda (x y) (/ (+ x y) 2)) b1 b0)))
-    (new-boundry p
-		 (map
-		  (lambda (e) (/ e 2.0))
-		  p))))
+  (let ((b0 (boundry-0 boundry))
+	(b1 (boundry-1 boundry))
+	(by2 (lambda (e) (/ e 2.0))))
+    (new-boundry
+     (map by2 (map + b1 b0))
+     (map by2 (map - b1 b0)))))
+
+(define (_resolve_boundry b1 b2)
+  (lambda (ss sc cs cc)
+    (or
+     (and
+      (square-radius? b1)
+      (or
+       (and
+	(square-radius? b2)
+	(ss (radius->extent b1) (radius->extent b2)))
+       (and
+	(circle-radius? b2)
+	(cs b1 b2))))
+     (and
+      (circle-radius? b1)
+      (or
+       (and
+	(square-radius? b2)
+	(cs b2 b1))
+       (and
+	(circle-radius? b2)
+	(cc b1 b2)))))))
 
 (define (extent-collision? b1 b2)
   (let ((b1-0 (boundry-0 b1))
@@ -112,22 +135,28 @@
     (<= (+ (expt dx 2) (expt dy 2)) (expt b2-1 2))))
 
 (define (collision? b1 b2)
-  (or
-   (and
-    (square-radius? b1)
-    (or
-     (and
-      (square-radius? b2)
-      (extent-collision? (radius->extent b1) (radius->extent b2)))
-     (and
-      (circle-radius? b2)
-      (extent-radius-collision? b1 b2))))
-   (and
-    (circle-radius? b1)
-    (or
-     (and
-      (square-radius? b2)
-      (extent-radius-collision? b2 b1))
-     (and
-      (circle-radius? b2)
-      (radius-collision? b1 b2))))))
+  ((_resolve_boundry b1 b2)
+   extent-collision?
+   extent-radius-collision?
+   extent-radius-collision?
+   radius-collision?))
+
+(define (extent-merge b1 b2)
+  (let ((b1-0 (boundry-0 b1))
+        (b1-1 (boundry-1 b1))
+        (b2-0 (boundry-0 b2))
+        (b2-1 (boundry-1 b2)))
+    (extent->radius
+     (_boundry
+      (list (min (first b1-0) (first b2-0)) (min (second b1-0) (second b2-0)))
+      (list (max (first b1-1) (first b2-1)) (max (second b1-1) (second b2-1)))))))
+
+(define (merge b1 b2)
+  (cond
+   ((and (square-radius? b1) (square-radius? b2))
+    (extent-merge b1 b2))
+   ((square-radius? b1)
+    (extent-merge b1 (radius->extent b2)))
+   ((square-radius? b2)
+    (extent-merge (radius->extent b1) b2))
+   (#t (extent-merge (radius->extent b1) (radius->extent b2)))))
