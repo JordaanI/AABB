@@ -11,14 +11,20 @@
 ;;
 ;;
 ;; Author: Ivan Jordaan
-;; Date: 2025-12-05
+;; Date: 2025-12-16
 ;; email: ivan@axoinvent.com
 ;; Project:
 ;;
 
-(include "../../utilities/loader.scm")
+(define-type node id: 3F469D30-9A3A-4CD9-AA7D-D9BBA0C900FF parent boundry left right height)
 
-(include "boundry.scm")
-(include "node.scm")
+(define (boundry->node boundry)
+  (make-node
+   #f
+   boundry
+   #f
+   #f
+   0))
 
-(include "test.scm")
+(define (tree-node-add tree node)
+  )

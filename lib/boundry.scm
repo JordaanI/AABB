@@ -160,3 +160,7 @@
    ((square-radius? b2)
     (extent-merge (radius->extent b1) b2))
    (#t (extent-merge (radius->extent b1) (radius->extent b2)))))
+
+(define (boundry-volume b1)
+  (let ((eb (radius->extent b1)))
+    (apply * (map - (boundry-1 eb) (boundry-0 eb)))))
