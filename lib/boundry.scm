@@ -82,13 +82,13 @@
 	(ss (radius->extent b1) (radius->extent b2)))
        (and
 	(circle-radius? b2)
-	(cs b1 b2))))
+	(cs (radius->extent b1) b2))))
      (and
       (circle-radius? b1)
       (or
        (and
 	(square-radius? b2)
-	(cs b2 b1))
+	(cs (radius->extent b2) b1))
        (and
 	(circle-radius? b2)
 	(cc b1 b2)))))))
@@ -152,14 +152,7 @@
       (list (max (first b1-1) (first b2-1)) (max (second b1-1) (second b2-1)))))))
 
 (define (merge b1 b2)
-  (cond
-   ((and (square-radius? b1) (square-radius? b2))
-    (extent-merge b1 b2))
-   ((square-radius? b1)
-    (extent-merge b1 (radius->extent b2)))
-   ((square-radius? b2)
-    (extent-merge (radius->extent b1) b2))
-   (#t (extent-merge (radius->extent b1) (radius->extent b2)))))
+  (extent-merge (radius->extent b1) (radius->extent b2)))
 
 (define (boundry-volume b1)
   (let ((eb (radius->extent b1)))
