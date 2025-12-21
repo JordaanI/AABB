@@ -85,31 +85,23 @@
 		(tree-boundry-add right boundry)
 		#t)))))))
 
-(define (tree-node-remove tree boundry)
+(define (tree-boundry-remove tree boundry)
   (update-branch
-  (let ((left (node-left tree))
-	(right (node-right tree)))
-    (cond
-     ((equal? boundry (node-boundry left))
-	(make-node
-	 #f
-	 tree
-	 right
-	 #t))
-     ((equal? boundry (node-boundry right))
-	(make-node
-	 #f
-	 left
-	 tree
-	 #t))
-     (left
-      (make-node
-       #f
-       (tree-node-remove left boundry)
-       (tree-node-remove right boundry)
-       #t))
-     (#t
-      tree)))))
+   (let ((left (node-left tree))
+	 (right (node-right tree)))
+     (cond
+      ((equal? boundry (and left (node-boundry left)))
+       right)
+      ((equal? boundry (and right (node-boundry right)))
+	left)
+      (left
+       (make-node
+	#f
+	(tree-boundry-remove left boundry)
+	(tree-boundry-remove right boundry)
+	#t))
+      (#t
+       tree)))))
 
 (define (build-tree . boundries)
   (letrec ((build (lambda (tree boundries)
