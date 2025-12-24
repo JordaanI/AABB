@@ -16,60 +16,50 @@
 ;; Project: Main file for AABBTree implmented in Gambit Scheme
 ;;
 
-(define-type boundry id: 4B48A7EC-7E41-42E9-9AAB-DDF5DDB9DE47 type data)
+(define-type boundry id: 4B48A7EC-7E41-42E9-9AAB-DDF5DDB9DE47 type center radius mount)
 
-(define (_boundry start end)
+(define (_boundry start end #!optional mount)
   (make-boundry
    'extent
-   (list->table `((0 ,@start)
-                  (1 ,@end)))))
+   start
+   end
+   mount))
 
-(define (new-boundry center radius)
+(define (new-boundry center radius #!optional mount)
   (make-boundry
    'radius
-   (list->table `((0 . ,center)
-                  (1 . ,radius)))))
+   center
+   radius
+   mount))
 
 (define (square-radius? boundry)
   (and
    (eq? (boundry-type boundry) 'radius)
-   (list? (table-ref (boundry-data boundry) 1))))
+   (list? (boundry-radius boundry))))
 
 (define (circle-radius? boundry)
   (and
    (eq? (boundry-type boundry) 'radius)
-   (number? (table-ref (boundry-data boundry) 1))))
-
-(define (boundry-0 boundry #!optional value)
-  (let ((data (table-copy (boundry-data boundry))))
-    (if value (begin
-                (table-set! data 0 value)
-                (boundry-data-set! boundry data))
-        (table-ref data 0))))
-
-(define (boundry-1 boundry #!optional value)
-  (let ((data (table-copy (boundry-data boundry))))
-    (if value (begin
-                (table-set! data 1 value)
-                (boundry-data-set! boundry data))
-        (table-ref data 1))))
+   (number? (boundry-radius boundry))))
 
 (define (radius->extent boundry)
-  (let* ((b0 (boundry-0 boundry))
-         (b1 (boundry-1 boundry))
+  (let* ((b0 (boundry-center boundry))
+         (b1 (boundry-radius boundry))
 	 (factor (if (list? b1) b1
 		     (make-list (length b0) b1))))
     (_boundry
      (map - b0 factor)
-     (map + b0 factor))))
+     (map + b0 factor)
+     (boundry-mount boundry))))
 
 (define (extent->radius boundry)
-  (let ((b0 (boundry-0 boundry))
-	(b1 (boundry-1 boundry))
+  (let ((b0 (boundry-center boundry))
+	(b1 (boundry-radius boundry))
 	(by2 (lambda (e) (/ e 2.0))))
     (new-boundry
      (map by2 (map + b1 b0))
-     (map by2 (map - b1 b0)))))
+     (map by2 (map - b1 b0))
+     (boundry-mount boundry))))
 
 (define (_resolve_boundry b1 b2)
   (lambda (ss sc cs cc)
@@ -94,30 +84,30 @@
 	(cc b1 b2)))))))
 
 (define (extent-collision? b1 b2)
-  (let ((b1-0 (boundry-0 b1))
-        (b1-1 (boundry-1 b1))
-        (b2-0 (boundry-0 b2))
-        (b2-1 (boundry-1 b2)))
+  (let ((b1-0 (boundry-center b1))
+        (b1-1 (boundry-radius b1))
+        (b2-0 (boundry-center b2))
+        (b2-1 (boundry-radius b2)))
     (apply andf
            (append
             (map <= b1-0 b2-1)
             (map >= b1-1 b2-0)))))
 
 (define (radius-collision? b1 b2)
-  (let ((b1-0 (boundry-0 b1))
-        (b1-1 (boundry-1 b1))
-        (b2-0 (boundry-0 b2))
-        (b2-1 (boundry-1 b2)))
+  (let ((b1-0 (boundry-center b1))
+        (b1-1 (boundry-radius b1))
+        (b2-0 (boundry-center b2))
+        (b2-1 (boundry-radius b2)))
     (<= (apply + (map (lambda (term)
                         (* term term))
                       (map - b1-0 b2-0)))
         (expt (+ b1-1 b2-1) 2))))
 
 (define (extent-radius-collision? b1 b2)
-  (let* ((b1-0 (boundry-0 b1))
-         (b1-1 (boundry-1 b1))
-         (b2-0 (boundry-0 b2))
-         (b2-1 (boundry-1 b2))
+  (let* ((b1-0 (boundry-center b1))
+         (b1-1 (boundry-radius b1))
+         (b2-0 (boundry-center b2))
+         (b2-1 (boundry-radius b2))
 	 (cx (first b2-0))
 	 (cy (second b2-0))
 	 (x0 (first b1-0))
@@ -142,10 +132,10 @@
    radius-collision?))
 
 (define (extent-merge b1 b2)
-  (let ((b1-0 (boundry-0 b1))
-        (b1-1 (boundry-1 b1))
-        (b2-0 (boundry-0 b2))
-        (b2-1 (boundry-1 b2)))
+  (let ((b1-0 (boundry-center b1))
+        (b1-1 (boundry-radius b1))
+        (b2-0 (boundry-center b2))
+        (b2-1 (boundry-radius b2)))
     (extent->radius
      (_boundry
       (list (min (first b1-0) (first b2-0)) (min (second b1-0) (second b2-0)))
@@ -153,6 +143,16 @@
 
 (define (merge b1 b2)
   (extent-merge (radius->extent b1) (radius->extent b2)))
+
+(define (merge-boundries boundries)
+  (cond
+   ((null? boundries) (new-boundry '(0 0) 0))
+   ((> 1 (length boundries))
+    (letrec ((build (lambda (boundry boundries)
+                      (if (null? boundries) boundry
+                          (build (merge boundry (car boundries)) (cdr boundries))))))
+      (build (car boundries) (cdr boundries))))
+   (#t (car boundries))))
 
 (define (boundry-volume b1)
   (let ((eb (radius->extent b1)))
