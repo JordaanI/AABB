@@ -26,25 +26,21 @@
    #f))
 
 (define (update-branch node)
-  (let* ((left (node-left node))
-	 (right (node-right node))
-	 (clean-left? (and left (node-dirty? left)))
-	 (clean-right? (and right (node-dirty? right))))
+  (let ((left (node-left node))
+	(right (node-right node)))
     (cond
      ((and left (node-dirty? left))
-      (let ((new-left (update-branch left)))
-	(make-node
-	 (merge (node-boundry new-left) (node-boundry right))
-	 new-left
-	 right
-	 #f)))
+      (make-node
+       (merge (node-boundry new-left) (node-boundry right))
+       (update-branch left)
+       right
+       #f))
      ((and right (node-dirty? right))
-      (let ((new-right (update-branch right)))
-	(make-node
-	 (merge (node-boundry new-left) (node-boundry right))
-	 new-left
-	 right
-	 #f)))
+      (make-node
+       (merge (node-boundry new-left) (node-boundry right))
+       left
+       (update-branch right)
+       #f))
      (left
       (make-node
        (merge (node-boundry left) (node-boundry right))
@@ -77,7 +73,7 @@
 	       (make-node
 		#f
 		(tree-boundry-add left boundry)
-		right       
+		right
 		#t)
 	       (make-node
 		#f
@@ -104,14 +100,21 @@
        tree)))))
 
 (define (build-tree . boundries)
-  (letrec ((build (lambda (tree boundries)
-		    (if (null? boundries) tree
-			(build
-			 (tree-boundry-add tree (car boundries))
-			 (cdr boundries))))))
-    (build (boundry->node (car boundries)) (cdr boundries))))
+  (fold
+   (lambda (e a)
+     (tree-boundry-add a e))
+   (boundry->node (car boundries))
+   (cdr boundries)))
 
 (define (boundry-collisions tree boundry)
+  (let ((all-collisions (_boundry-collisions tree boundry)))
+    (or
+     (and
+      (equal? boundry (car all-collisions))
+      (cdr all-collisions))
+     (remove boundry all-collisions))))
+
+(define (_boundry-collisions tree boundry)
   (let ((ref (node-boundry tree))
 	(left (node-left tree))
 	(right (node-right tree)))
@@ -119,6 +122,6 @@
 	(if (and (not left) (not right))
 	    (list ref)
 	    (append
-	     (boundry-collisions left boundry)
-	     (boundry-collisions right boundry)))
+	     (_boundry-collisions left boundry)
+	     (_boundry-collisions right boundry)))
 	(list))))

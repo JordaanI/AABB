@@ -156,4 +156,4 @@
 
 (define (boundry-volume b1)
   (let ((eb (radius->extent b1)))
-    (apply * (map - (boundry-1 eb) (boundry-0 eb)))))
+    (apply * (map - (boundry-radius eb) (boundry-center eb)))))

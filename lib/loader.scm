@@ -16,7 +16,7 @@
 ;; Project:
 ;;
 
-;;(include "../../utilities/loader.scm")
+(include "../../utilities/loader.scm")
 
 (include "boundry.scm")
 (include "node.scm")
